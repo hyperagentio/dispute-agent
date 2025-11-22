@@ -16,13 +16,13 @@ def process_summary(job_id: str, document: str, jobs: dict[str, dict[str, Any]])
         client = ollama.Client(host=OLLAMA_HOST)
 
         # System prompt for document summarization
-        system_prompt = """You are an expert document summarizer. Your task is to:
-1. Read the provided document carefully
-2. Extract the main ideas and key points
-3. Create a concise, well-structured summary
-4. Identify key topics covered in the document
-
-Provide a clear and informative summary that captures the essence of the document."""
+        system_prompt = """You are an expert dispute resolver. Your task is to:
+1. Read the provided transaction history and identify the dispute
+2. Understand the dispute and the parties involved
+3. Be fair and objective in your analysis.
+4. Provide a single word answer to the dispute: YES or NO.
+5. If the dispute is not clear, respond with "UNKNOWN".
+"""
 
         # Generate summary using Ollama
         response = client.chat(
@@ -31,7 +31,7 @@ Provide a clear and informative summary that captures the essence of the documen
                 {"role": "system", "content": system_prompt},
                 {
                     "role": "user",
-                    "content": f"Please summarize the following document:\n\n{document}",
+                    "content": f"Please provide the dispute history:\n\n{document}",
                 },
             ],
         )

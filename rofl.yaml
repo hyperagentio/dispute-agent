@@ -19,6 +19,25 @@ artifacts:
     runtime: https://github.com/oasisprotocol/oasis-sdk/releases/download/rofl-containers%2Fv0.8.4/rofl-containers#2cd0468ec2ea5f4264f47f728c5c3b0fcce93f5a537e568f8cbab8a53b526ae7
     compose: compose.yaml
 deployments:
+  default:
+    app_id: rofl1qzwyz8778475fcqjz0v6qk78h809285qry7she8u
+    network: testnet
+    paratime: sapphire
+    admin: ba_test
+    trust_root:
+      height: 29459403
+      hash: 645cf6cd186a7c96f9dc2b7bc9d1ca06b7e855f1e40d85eb676ece18c9d3e9af
+    policy:
+      quotes:
+        pcs:
+          tcb_validity_period: 30
+          min_tcb_evaluation_data_number: 18
+          tdx: {}
+      enclaves: []
+      endorsements:
+        - any: {}
+      fees: endorsing_node
+      max_expiration: 3
   testnet:
     app_id: rofl1qq6m08wlj3qawcfrd3ljyge2t0praed5ycwh7upg
     network: testnet
