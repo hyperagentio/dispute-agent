@@ -2,7 +2,7 @@ name: verifier-agent
 version: 0.1.0
 repository: https://github.com/hyperagentio/dispute-agent
 author: Peter Us <peter@u-s.si>
-description: A verifiable dispute resolution agent that uses blockchain micropayments (x402 protocol) and runs inside a ROFL trusted execution environment on the Oasis Network.
+description: A verifiable dispute resolution agent that runs inside a ROFL trusted execution environment on the Oasis Network.
 tee: tdx
 kind: container
 resources:

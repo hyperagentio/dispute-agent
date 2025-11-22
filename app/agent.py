@@ -5,7 +5,7 @@ ERC-8004 Agent registration and management for Verifier Agent.
 import json
 import os
 from typing import Any
-
+sdk
 from agent0_sdk import SDK
 
 
@@ -71,7 +71,7 @@ async def initialize_agent(
     agent_description: str,
     agent_image: str,
     agent_wallet_address: str | None,
-    x402_endpoint_url: str,
+    endpoint_url: str,
     ai_provider: str,
 ) -> tuple[SDK | None, Any]:
     """Initialize Agent0 SDK and create agent.
@@ -118,18 +118,15 @@ async def initialize_agent(
         # Set trust with reputation and TEE attestation
         initialized_agent.setTrust(reputation=True, teeAttestation=True)
 
-        # Enable x402 payment support
-        initialized_agent.setX402Support(True)
-
-        # Register x402 endpoint as A2A endpoint
-        initialized_agent.setA2A(x402_endpoint_url, version="1.0", auto_fetch=False)
+        # Register API endpoint as A2A endpoint
+        initialized_agent.setA2A(endpoint_url, version="1.0", auto_fetch=False)
 
         # Add metadata
         initialized_agent.setMetadata(
             {
                 "version": "1.0.0",
                 "category": "ai-assistant",
-                "service": "document-summarization",
+                "service": "job-verification",
                 "ai_provider": ai_provider,
             }
         )

@@ -9,13 +9,13 @@ import ollama
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 
 
-def process_summary(job_id: str, document: str, jobs: dict[str, dict[str, Any]]):
-    """Process document summarization using Ollama"""
+def process_summary(job_id: str, job_data: str, jobs: dict[str, dict[str, Any]]):
+    """Process job verification using Ollama"""
     try:
         # Configure ollama client
         client = ollama.Client(host=OLLAMA_HOST)
 
-        # System prompt for document summarization
+        # System prompt for dispute resolution
         system_prompt = """You are an expert dispute resolver. Your task is to:
 1. Read the provided transaction history and identify the dispute
 2. Understand the dispute and the parties involved
@@ -24,28 +24,28 @@ def process_summary(job_id: str, document: str, jobs: dict[str, dict[str, Any]])
 5. If the dispute is not clear, respond with "UNKNOWN".
 """
 
-        # Generate summary using Ollama
+        # Generate verification using Ollama
         response = client.chat(
             model="qwen2:0.5b",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {
                     "role": "user",
-                    "content": f"Please provide the dispute history:\n\n{document}",
+                    "content": f"Please provide the dispute history:\n\n{job_data}",
                 },
             ],
         )
 
-        summary = response["message"]["content"]
+        verification_result = response["message"]["content"]
 
         # Calculate basic statistics
-        word_count = len(document.split())
+        word_count = len(job_data.split())
         reading_time = max(1, word_count // 200)  # Assume 200 words per minute
 
         # Update job with result
         jobs[job_id] = {
             "status": "completed",
-            "summary": summary,
+            "result": verification_result,
             "word_count": word_count,
             "reading_time": f"{reading_time} minute{'s' if reading_time != 1 else ''}",
             "timestamp": int(time.time()),

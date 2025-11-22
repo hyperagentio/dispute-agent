@@ -1,6 +1,6 @@
 # Test Client
 
-Test client for the x402 document summarization service demonstrating the full payment flow.
+Test client for the job verification service.
 
 ## Setup
 
@@ -34,7 +34,7 @@ The client will:
 2. Receive a 402 Payment Required response
 3. Use CDP SDK to make a payment on BASE Sepolia
 4. Retry the request with the payment proof
-5. Receive and display the document summary
+5. Receive and display the verification result
 
 ## Configuration
 

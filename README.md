@@ -1,18 +1,16 @@
-# Verifier Agent - Oasis ROFL x402 Service
+# Verifier Agent - Oasis ROFL Service
 
-A confidential AI microservice that summarizes documents inside a verifiable TEE, paid via x402 micropayments.
+A confidential AI microservice that verifies jobs inside a verifiable TEE.
 
-- **🔒 Private**: Documents processed inside a confidential Oasis ROFL container using Ollama (qwen2:0.5b)
+- **🔒 Private**: Jobs processed inside a confidential Oasis ROFL container using Ollama (qwen2:0.5b)
 - **🔐 Secure**: Uses aTLS (Attested TLS) with end-to-end TLS authentication from the TEE
 - **✅ Verifiable**: Remote attestation proves the exact code running in the TEE
 - **🔏 Signed**: All responses cryptographically signed with TEE-generated SECP256K1 keys
-- **💰 Monetizable**: x402 micropayments - $0.001 per summary on Base Sepolia (testnet)
 - **📝 Discoverable**: Registered on-chain using [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) Agent Identity Standard
 
 **Tech Stack**
 - Python FastAPI backend
 - Ollama (Qwen2 0.5B model)
-- x402 protocol for micropayments
 - ERC-8004 on-chain agent registration with [Agent0 SDK](https://github.com/agent0lab/agent0-py)
 - Oasis ROFL keymanager for TEE-based cryptographic signing
 - Runs in an Oasis ROFL TEE on the Oasis Network
@@ -23,40 +21,26 @@ A confidential AI microservice that summarizes documents inside a verifiable TEE
 docker compose up
 ```
 
-The test client (in the `test/` folder) automatically performs an x402 payment and then requests the summary, verifying the on-chain transaction.
+The test client (in the `test/` folder) automatically requests the verification via HTTP.
 
 ```bash
 cd test
 uv sync
 
-# Generate a test wallet (save the private key!)
-uv run python -c "from eth_account import Account; acc = Account.create(); print(f'Address: {acc.address}\nPrivate Key: {acc.key.hex()}')"
-
-# Fund the wallet with Base Sepolia ETH and USDC
-# - ETH for gas: https://www.coinbase.com/en-gb/developer-platform/products/faucet
-# - USDC: 0x036CbD53842c5426634e7929541eC2318f3dCF7e
-
-# Configure .env with your private key
-echo "PRIVATE_KEY=0x..." > .env
-echo "API_URL=http://localhost:4021" >> .env
+# Configure API URL
+echo "API_URL=http://localhost:4021" > .env
 
 # Run the test (uses test_document.txt by default)
 uv run python test_client.py
 
-# Or test with your own document
-uv run python test_client.py /path/to/your/document.txt
+# Or test with your own job data
+uv run python test_client.py /path/to/your/job_data.txt
 ```
 
 **Example output:**
 
 ```
-🔒 Testing without payment (should fail)...
-   ✅ Correctly rejected with 402 Payment Required
-
 ✅ Job created (took 1.66s)
-
-🔒 Testing payment reuse (should fail)...
-   ✅ Correctly rejected payment reuse with 402
 
 ⏳ Polling for result...
    ✅ Completed after ~44s
@@ -82,7 +66,6 @@ When the service starts running in an Oasis ROFL TEE, it automatically:
 - Registers the agent on-chain with metadata (name, description, capabilities)
 - Publishes the agent card to IPFS
 - Configures trust models (reputation + TEE attestation)
-- Enables x402 payment support
 - Registers the service endpoint for discovery
 
 ### Configuration
@@ -99,12 +82,12 @@ AGENT0_PINATA_JWT=your-pinata-jwt-token
 
 # Agent Configuration
 AGENT_NAME=Verifier Agent
-AGENT_DESCRIPTION=x402-enabled document processing agent running in Oasis TEE
+AGENT_DESCRIPTION=Verifier agent for dispute resolution running in Oasis TEE
 AGENT_IMAGE=https://your-domain.com/logo.png  # Served from /logo.png endpoint
 AGENT_WALLET_ADDRESS=0x...  # Optional: agent's payment wallet
 
-# x402 Endpoint
-X402_ENDPOINT_URL=https://your-domain.com/summarize-doc
+# API Endpoint
+ENDPOINT_URL=https://your-domain.com/verify
 ```
 
 The agent ID is persisted in Oasis ROFL metadata (production) or a local `.agent_id` file (development). On subsequent restarts, the service will load and update the existing agent rather than creating a new one.
@@ -117,12 +100,12 @@ Once registered, your agent will have an on-chain identity with metadata like:
 {
   "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
   "name": "Verifier Agent",
-  "description": "x402-enabled document processing agent running in Oasis TEE. REST API for async summarization. Ollama AI backend. On-chain registered with reputation trust model.",
+  "description": "Verifier agent for dispute resolution running in Oasis TEE. REST API for async verification. Ollama AI backend. On-chain registered with reputation trust model.",
   "image": "http://localhost:4021/logo.png",
   "endpoints": [
     {
       "name": "A2A",
-      "endpoint": "https://summarize.updev.si/summarize-doc",
+      "endpoint": "https://verify.updev.si/verify",
       "version": "1.0"
     },
     {
@@ -138,7 +121,6 @@ Once registered, your agent will have an on-chain identity with metadata like:
   ],
   "supportedTrust": ["reputation", "tee-attestation"],
   "active": true,
-  "x402support": true,
   "updatedAt": 1762363389
 }
 ```
@@ -173,72 +155,6 @@ DEBUG_SIGNING=true         # Use mock keys for testing
 
 In production, the signing key is generated by Oasis ROFL's secure keymanager and never leaves the TEE. The public key can be verified against the on-chain attested state in the [Oasis ROFL registry](https://github.com/ptrus/rofl-registry).
 
-## Try the Live Testnet Deployment
-
-**Live service running on Oasis Testnet** at **https://summarize.updev.si** ([App ID: `rofl1qq6m08wlj3qawcfrd3ljyge2t0praed5ycwh7upg`](https://explorer.oasis.io/testnet/sapphire/rofl/app/rofl1qq6m08wlj3qawcfrd3ljyge2t0praed5ycwh7upg))
-
-Test the live deployment:
-
-```bash
-cd test
-echo "API_URL=https://summarize.updev.si" >> .env
-
-# Test with default document
-uv run python test_client.py
-
-# Or test with this README
-uv run python test_client.py ../README.md
-```
-
-**Example output (summarizing this README):**
-
-```
-✅ Job created (took 2.46s)
-
-🔒 Testing payment reuse (should fail)...
-   ✅ Correctly rejected payment reuse with 402
-
-⏳ Polling for result...
-   ✅ Completed after ~196s
-
-📄 Summary:
-   The document outlines a new AI microservice called ROFL that utilizes the
-   Ollama model from the Qwen2 series. This microservice is paid via x402
-   protocol payments and can be used to summarize documents inside a private
-   container using encryption. The document also mentions the ability to
-   monetize the service through x402 protocols and uses Base Sepolia as a
-   test network for testing purposes.
-
-📊 Stats:
-   Word count: 604
-   Reading time: 3 minutes
-```
-
-**Example output (summarizing this README):**
-
-```
-✅ Job created (took 2.46s)
-
-🔒 Testing payment reuse (should fail)...
-   ✅ Correctly rejected payment reuse with 402
-
-⏳ Polling for result...
-   ✅ Completed after ~196s
-
-📄 Summary:
-   The document outlines a new AI microservice called ROFL that utilizes the
-   Ollama model from the Qwen2 series. This microservice is paid via x402
-   protocol payments and can be used to summarize documents inside a private
-   container using encryption. The document also mentions the ability to
-   monetize the service through x402 protocols and uses Base Sepolia as a
-   test network for testing purposes.
-
-📊 Stats:
-   Word count: 604
-   Reading time: 3 minutes
-```
-
-To verify the app code, attestation, and TLS connection, see [rofl-registry](https://github.com/ptrus/rofl-registry).
 
 ## Deploy Your Own Service
 
@@ -261,19 +177,17 @@ oasis rofl init --reset
 
 ### 3. Customize Your Service
 
-Modify the endpoint implementation in `app/main.py` (lines 51-84) to create your own paid service:
+Modify the endpoint implementation in `app/main.py` to create your own service:
 
 ```python
-@app.post("/summarize-doc")
-async def summarize_doc(request: DocumentRequest) -> Dict[str, Any]:
+@app.post("/verify")
+async def verify_job(request: JobRequest) -> Dict[str, Any]:
     # Your custom service logic here
-    # Example: image generation, data analysis, API access, etc.
+    # Example: job verification, data analysis, API access, etc.
     ...
 ```
 
-Update the payment configuration:
-- Change `X402_PRICE` in `.env` for your desired pricing
-- Modify `X402_NETWORK` if deploying to mainnet
+Update the API configuration as needed.
 
 ### 4. Deploy to ROFL
 
@@ -284,19 +198,18 @@ Follow the [ROFL deployment guide](https://docs.oasis.io/build/tools/cli/rofl) t
 docker compose build
 
 # Push to registry (if needed)
-docker tag docker.io/ptrusr/rofl-x402-docs:latest your-registry/your-app:latest
+docker tag your-image:latest your-registry/your-app:latest
 docker push your-registry/your-app:latest
 
 # Deploy using oasis-cli
 oasis rofl deploy
 ```
 
-Your service will be deployed with verifiable code execution and ready to accept x402 payments!
+Your service will be deployed with verifiable code execution!
 
 ## Learn More
 
 - [Oasis ROFL](https://docs.oasis.io/rofl) - Runtime Off-chain Logic documentation
-- [x402 Protocol](https://github.com/coinbase/x402) - Internet-native payment protocol
 - [Ollama](https://ollama.com) - Run large language models locally
 
 ## License

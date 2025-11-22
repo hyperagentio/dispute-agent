@@ -1,5 +1,5 @@
 """
-Oasis ROFL FastAPI server with x402 payment middleware.
+Oasis ROFL FastAPI server for job verification.
 """
 
 import os
@@ -13,7 +13,6 @@ from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from x402.fastapi.middleware import require_payment
 
 from agent import add_signing_key_to_agent, initialize_agent
 from signing import signing_service
@@ -22,10 +21,7 @@ from signing import signing_service
 load_dotenv()
 
 # Get configuration from environment
-ADDRESS = os.getenv("ADDRESS")
-X402_NETWORK = os.getenv("X402_NETWORK", "base-sepolia")
-X402_PRICE = os.getenv("X402_PRICE", "$0.001")
-X402_ENDPOINT_URL = os.getenv("X402_ENDPOINT_URL", "http://localhost:4021/summarize-doc")
+ENDPOINT_URL = os.getenv("ENDPOINT_URL", "http://localhost:4021/verify")
 
 # Import Ollama provider
 import ollama_provider as ai_provider
@@ -46,17 +42,14 @@ AGENT_DESCRIPTION = os.getenv(
 AGENT_IMAGE = os.getenv("AGENT_IMAGE", "https://example.com/agent-image.png")
 AGENT_WALLET_ADDRESS = os.getenv("AGENT_WALLET_ADDRESS")
 
-if not ADDRESS:
-    raise ValueError("Missing required environment variable: ADDRESS")
-
 app = FastAPI()
 
 # Logo path
 LOGO_PATH = Path(__file__).parent / "logo.png"
 
 # Model constraints
-MAX_DOCUMENT_LENGTH = 400000  # ~100K tokens (rough estimate: 4 chars per token)
-MIN_DOCUMENT_LENGTH = 50  # Minimum meaningful document length
+MAX_JOB_DATA_LENGTH = 400000  # ~100K tokens (rough estimate: 4 chars per token)
+MIN_JOB_DATA_LENGTH = 50  # Minimum meaningful job data length
 
 # In-memory job storage (in production, use Redis or similar)
 jobs: dict[str, dict[str, Any]] = {}
@@ -84,7 +77,7 @@ async def startup_event():
         agent_description=AGENT_DESCRIPTION,
         agent_image=AGENT_IMAGE,
         agent_wallet_address=AGENT_WALLET_ADDRESS,
-        x402_endpoint_url=X402_ENDPOINT_URL,
+        endpoint_url=ENDPOINT_URL,
         ai_provider="ollama",
     )
 
@@ -93,21 +86,8 @@ async def startup_event():
         await add_signing_key_to_agent(agent, signing_service.public_key_hex)
 
 
-class DocumentRequest(BaseModel):
-    document: str
-
-
-# Apply payment middleware to POST endpoint only (not GET status polling)
-# IMPORTANT: If using production endpoints, ensure payment settlement is completed
-# on-chain before starting the job to avoid processing unpaid requests.
-app.middleware("http")(
-    require_payment(
-        path="/summarize-doc",
-        price=X402_PRICE,
-        pay_to_address=ADDRESS,
-        network=X402_NETWORK,
-    )
-)
+class JobRequest(BaseModel):
+    job_data: str
 
 
 @app.get("/")
@@ -115,9 +95,7 @@ async def root() -> dict[str, Any]:
     """Root endpoint with service information"""
     response = {
         "service": "Verifier Agent",
-        "endpoint": "POST /summarize-doc",
-        "price": X402_PRICE,
-        "network": X402_NETWORK,
+        "endpoint": "POST /verify",
         "ai_provider": "ollama",
     }
 
@@ -140,23 +118,23 @@ async def get_logo():
     raise HTTPException(status_code=404, detail="Logo not found")
 
 
-@app.post("/summarize-doc")
-async def summarize_doc(
-    request: DocumentRequest, background_tasks: BackgroundTasks
+@app.post("/verify")
+async def verify_job(
+    request: JobRequest, background_tasks: BackgroundTasks
 ) -> dict[str, Any]:
-    # Validate document length
-    doc_length = len(request.document)
+    # Validate job data length
+    data_length = len(request.job_data)
 
-    if doc_length < MIN_DOCUMENT_LENGTH:
+    if data_length < MIN_JOB_DATA_LENGTH:
         raise HTTPException(
             status_code=400,
-            detail=f"Document too short. Minimum length is {MIN_DOCUMENT_LENGTH} characters.",
+            detail=f"Job data too short. Minimum length is {MIN_JOB_DATA_LENGTH} characters.",
         )
 
-    if doc_length > MAX_DOCUMENT_LENGTH:
+    if data_length > MAX_JOB_DATA_LENGTH:
         raise HTTPException(
             status_code=400,
-            detail=f"Document too long. Maximum length is {MAX_DOCUMENT_LENGTH} characters (~100K tokens).",
+            detail=f"Job data too long. Maximum length is {MAX_JOB_DATA_LENGTH} characters (~100K tokens).",
         )
 
     # Create job ID
@@ -164,21 +142,21 @@ async def summarize_doc(
     jobs[job_id] = {"status": "processing", "timestamp": int(time.time())}
 
     # Start background processing using the selected AI provider
-    background_tasks.add_task(ai_provider.process_summary, job_id, request.document, jobs)
+    background_tasks.add_task(ai_provider.process_summary, job_id, request.job_data, jobs)
 
     # Return job ID immediately
     return {
         "job_id": job_id,
         "status": "processing",
-        "status_url": f"/summarize-doc/{job_id}",
+        "status_url": f"/verify/{job_id}",
         "provider": "ollama",
         "timestamp": int(time.time()),
     }
 
 
-@app.get("/summarize-doc/{job_id}")
-async def get_summary_status(job_id: str) -> dict[str, Any]:
-    """Get the status of a summarization job"""
+@app.get("/verify/{job_id}")
+async def get_verification_status(job_id: str) -> dict[str, Any]:
+    """Get the status of a verification job"""
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
 
