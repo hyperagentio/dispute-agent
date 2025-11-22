@@ -23,9 +23,6 @@ dev = [
 ollama = [
     "ollama>=0.4.4",
 ]
-gaia = [
-    "openai>=1.0.0",
-]
 
 [tool.ruff]
 line-length = 100

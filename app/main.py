@@ -85,7 +85,7 @@ async def startup_event():
         agent_image=AGENT_IMAGE,
         agent_wallet_address=AGENT_WALLET_ADDRESS,
         x402_endpoint_url=X402_ENDPOINT_URL,
-        ai_provider=AI_PROVIDER,
+        ai_provider="ollama",
     )
 
     # Add signing public key to agent metadata if available
@@ -118,7 +118,7 @@ async def root() -> dict[str, Any]:
         "endpoint": "POST /summarize-doc",
         "price": X402_PRICE,
         "network": X402_NETWORK,
-        "ai_provider": AI_PROVIDER,
+        "ai_provider": "ollama",
     }
 
     # Add agent information if available
@@ -171,7 +171,7 @@ async def summarize_doc(
         "job_id": job_id,
         "status": "processing",
         "status_url": f"/summarize-doc/{job_id}",
-        "provider": AI_PROVIDER,
+        "provider": "ollama",
         "timestamp": int(time.time()),
     }
 

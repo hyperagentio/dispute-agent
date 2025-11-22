@@ -19,7 +19,6 @@ services:
       - X402_PRICE=${X402_PRICE:-$0.001}
       - X402_ENDPOINT_URL=${X402_ENDPOINT_URL:-http://localhost:4021/summarize-doc}
       - OLLAMA_HOST=http://llm:11434
-      - AI_PROVIDER=${AI_PROVIDER:-ollama}
       - AGENT0_CHAIN_ID=${AGENT0_CHAIN_ID:-84532}
       - AGENT0_RPC_URL=${AGENT0_RPC_URL}
       - AGENT0_PRIVATE_KEY=${AGENT0_PRIVATE_KEY}

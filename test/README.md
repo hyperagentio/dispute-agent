@@ -46,11 +46,8 @@ Set the following in `.env`:
 
 ## AI Provider Information
 
-The service supports two AI providers for document summarization:
-- **Ollama** (default) - Local inference with the Qwen2 0.5B model
-- **Gaia Nodes** - Decentralized AI inference with OpenAI compatible API
+The service uses **Ollama** for local inference with the Qwen2 0.5B model.
 
-The test client will display which provider is being used in the output.
-The AI provider is configured in the service, not the client.
+The test client will display the provider information in the output.
 
 ```
