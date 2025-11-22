@@ -1,5 +1,5 @@
 """
-ERC-8004 Agent registration and management for Oasis ROFL x402 service.
+ERC-8004 Agent registration and management for Verifier Agent.
 """
 
 import json

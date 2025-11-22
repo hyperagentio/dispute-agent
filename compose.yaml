@@ -13,8 +13,6 @@ services:
       - "4021:4021"
     volumes:
       - /run/rofl-appd.sock:/run/rofl-appd.sock
-    annotations:
-      net.oasis.proxy.ports.4021.custom_domain: summarize.updev.si
     environment:
       - ADDRESS=${ADDRESS:-0x492F9757240365621fA03fbcee80f3eA72b98d15}
       - X402_NETWORK=${X402_NETWORK:-base-sepolia}
@@ -27,7 +25,7 @@ services:
       - AGENT0_PRIVATE_KEY=${AGENT0_PRIVATE_KEY}
       - AGENT0_IPFS_PROVIDER=${AGENT0_IPFS_PROVIDER:-pinata}
       - AGENT0_PINATA_JWT=${AGENT0_PINATA_JWT}
-      - AGENT_NAME=${AGENT_NAME:-ROFL x402 Summarization Agent}
+      - AGENT_NAME=${AGENT_NAME:-Verifier Agent}
       - AGENT_DESCRIPTION=${AGENT_DESCRIPTION:-x402-enabled document processing agent running in TEE}
       - AGENT_IMAGE=${AGENT_IMAGE:-http://localhost:4021/logo.png}
       - AGENT_WALLET_ADDRESS=${AGENT_WALLET_ADDRESS}

@@ -1,4 +1,4 @@
-# Oasis ROFL x402 Document Summarization Service
+# Verifier Agent - Oasis ROFL x402 Service
 
 A confidential AI microservice that summarizes documents inside a verifiable TEE, paid via x402 micropayments.
 
@@ -153,7 +153,7 @@ AGENT0_IPFS_PROVIDER=pinata
 AGENT0_PINATA_JWT=your-pinata-jwt-token
 
 # Agent Configuration
-AGENT_NAME=Oasis ROFL x402 Summarization Agent
+AGENT_NAME=Verifier Agent
 AGENT_DESCRIPTION=x402-enabled document processing agent running in Oasis TEE
 AGENT_IMAGE=https://your-domain.com/logo.png  # Served from /logo.png endpoint
 AGENT_WALLET_ADDRESS=0x...  # Optional: agent's payment wallet
@@ -171,7 +171,7 @@ Once registered, your agent will have an on-chain identity with metadata like:
 ```json
 {
   "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
-  "name": "Oasis ROFL x402 Summarization Agent",
+  "name": "Verifier Agent",
   "description": "x402-enabled document processing agent running in Oasis TEE. REST API for async summarization. Multi-provider AI backend (Ollama/Gaia). On-chain registered with reputation trust model.",
   "image": "http://localhost:4021/logo.png",
   "endpoints": [
@@ -302,8 +302,8 @@ To verify the app code, attestation, and TLS connection, see [rofl-registry](htt
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/ptrus/rofl-x402-service
-cd rofl-x402-service
+git clone https://github.com/hyperagentio/dispute-agent
+cd dispute-agent
 ```
 
 ### 2. Reset ROFL Manifest

@@ -27,32 +27,8 @@ X402_NETWORK = os.getenv("X402_NETWORK", "base-sepolia")
 X402_PRICE = os.getenv("X402_PRICE", "$0.001")
 X402_ENDPOINT_URL = os.getenv("X402_ENDPOINT_URL", "http://localhost:4021/summarize-doc")
 
-
-# AI Backend selection
-class AIProvider(str, Enum):
-    OLLAMA = "ollama"
-    GAIA = "gaia"
-
-
-AI_PROVIDER = os.getenv("AI_PROVIDER", "ollama").lower()
-
-# Conditionally import AI provider modules
-if AI_PROVIDER == "gaia":
-    try:
-        import gaia_provider as ai_provider
-    except ImportError as e:
-        raise ImportError(
-            "Gaia provider selected but openai package not installed. "
-            "Install with: uv sync --group gaia"
-        ) from e
-else:
-    try:
-        import ollama_provider as ai_provider
-    except ImportError as e:
-        raise ImportError(
-            "Ollama provider selected but ollama package not installed. "
-            "Install with: uv sync --group ollama"
-        ) from e
+# Import Ollama provider
+import ollama_provider as ai_provider
 
 # Agent0 SDK configuration
 AGENT0_CHAIN_ID = int(os.getenv("AGENT0_CHAIN_ID", "11155111"))
@@ -62,10 +38,10 @@ AGENT0_IPFS_PROVIDER = os.getenv("AGENT0_IPFS_PROVIDER", "pinata")
 AGENT0_PINATA_JWT = os.getenv("AGENT0_PINATA_JWT")
 
 # Agent configuration
-AGENT_NAME = os.getenv("AGENT_NAME", "Oasis ROFL x402 Summarization Agent")
+AGENT_NAME = os.getenv("AGENT_NAME", "Verifier Agent")
 AGENT_DESCRIPTION = os.getenv(
     "AGENT_DESCRIPTION",
-    "Oasis ROFL x402-enabled document processing agent running in TEE. REST API for async summarization. Multi-provider AI backend (Ollama/Gaia). On-chain registered with reputation trust model.",
+    "Verifier agent for dispute resolution running in TEE. REST API for async verification. Ollama AI backend. On-chain registered with reputation trust model.",
 )
 AGENT_IMAGE = os.getenv("AGENT_IMAGE", "https://example.com/agent-image.png")
 AGENT_WALLET_ADDRESS = os.getenv("AGENT_WALLET_ADDRESS")
@@ -138,7 +114,7 @@ app.middleware("http")(
 async def root() -> dict[str, Any]:
     """Root endpoint with service information"""
     response = {
-        "service": "ROFL x402 Document Summarization",
+        "service": "Verifier Agent",
         "endpoint": "POST /summarize-doc",
         "price": X402_PRICE,
         "network": X402_NETWORK,
