@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 ENDPOINT_URL = os.getenv("ENDPOINT_URL", "http://localhost:4021/verify")
 
 # Hedera/Web3 configuration
-HEDERA_PRIVATE_KEY = os.getenv("PRIVATE_KEY", "0x22031d463eda96ebc465b649d31375cd22bd2eefc6c09bcd97da753cbb61e49a")
+HEDERA_PRIVATE_KEY = os.getenv("PRIVATE_KEY", "")
 HEDERA_NETWORK = os.getenv("HEDERA_NETWORK", "testnet")
 
 # Contract addresses (EVM addresses, not Hedera IDs)

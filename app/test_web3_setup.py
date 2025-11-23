@@ -8,7 +8,7 @@ from web3_hedera_helper import HederaWeb3Helper
 
 load_dotenv()
 
-PRIVATE_KEY = os.getenv("PRIVATE_KEY", "0x22031d463eda96ebc465b649d31375cd22bd2eefc6c09bcd97da753cbb61e49a")
+PRIVATE_KEY = os.getenv("PRIVATE_KEY", "")
 NETWORK = os.getenv("HEDERA_NETWORK", "testnet")
 
 
