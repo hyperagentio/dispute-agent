@@ -17,6 +17,11 @@ services:
       - ENDPOINT_URL=${ENDPOINT_URL:-http://localhost:4021/verify}
       - OLLAMA_HOST=http://llm:11434
       - ENVIRONMENT=${ENVIRONMENT:-development}
+      - PRIVATE_KEY=${PRIVATE_KEY:-22031d463eda96ebc465b649d31375cd22bd2eefc6c09bcd97da753cbb61e49a}
+      - HEDERA_NETWORK=${HEDERA_NETWORK:-testnet}
+      - JOBS_MODULE_ADDRESS=${JOBS_MODULE_ADDRESS:-0x7f99ED407aBE6a8da0f88C7282909fE818515416}
+      - DEBUG_SIGNING=${DEBUG_SIGNING:-true}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2:0.5b}
     depends_on:
       - llm
 

@@ -254,6 +254,18 @@ def process_validation(
             }
             return
         
+        # Validate job has valid data (not all zeros)
+        if job_details.agent_id == 0 or job_details.creator == "0x0000000000000000000000000000000000000000":
+            logger.warning(f"Job {job_id} has no valid data (agentId=0 or creator=0x0)")
+            jobs[validation_id] = {
+                "status": "failed",
+                "error": f"Job exists but has no valid data (agentId={job_details.agent_id}, creator={job_details.creator})",
+                "job_id": job_id,
+                "job_details": job_details.to_dict(),
+                "timestamp": int(time.time())
+            }
+            return
+        
         # Step 3: Build AI context and get reputation score
         logger.info("Building AI context for validation")
         ai_context = validation_service.build_ai_context(job_details)

@@ -11,6 +11,7 @@ dependencies = [
     "coincurve>=20.0.0",
     "oasis-rofl-client==0.1.6",
     "web3>=6.0.0",
+    "ollama>=0.4.4",
 ]
 
 [dependency-groups]

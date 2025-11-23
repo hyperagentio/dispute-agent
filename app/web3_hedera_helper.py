@@ -167,8 +167,9 @@ class HederaWeb3Helper:
         # Sign transaction
         signed = self.account.sign_transaction(transaction)
         
-        # Send transaction
-        tx_hash = self.w3.eth.send_raw_transaction(signed.rawTransaction)
+        # Send transaction (handle both old and new web3.py versions)
+        raw_tx = getattr(signed, 'rawTransaction', None) or getattr(signed, 'raw_transaction', None)
+        tx_hash = self.w3.eth.send_raw_transaction(raw_tx)
         
         # Wait for receipt
         receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
@@ -351,18 +352,22 @@ JOBS_MODULE_ABI = {
             {"name": "jobId", "type": "bytes32"}
         ],
         "name": "getJob",
-        "outputs": [
-            {"name": "creator", "type": "address"},
-            {"name": "agentId", "type": "uint256"},
-            {"name": "budget", "type": "uint256"},
-            {"name": "description", "type": "string"},
-            {"name": "state", "type": "uint8"},
-            {"name": "createdAt", "type": "uint64"},
-            {"name": "acceptDeadline", "type": "uint64"},
-            {"name": "completeDeadline", "type": "uint64"},
-            {"name": "multihopId", "type": "bytes32"},
-            {"name": "step", "type": "uint64"}
-        ],
+        "outputs": [{
+            "type": "tuple",
+            "name": "",
+            "components": [
+                {"type": "address", "name": "creator"},
+                {"type": "uint256", "name": "agentId"},
+                {"type": "uint256", "name": "budget"},
+                {"type": "string", "name": "description"},
+                {"type": "uint8", "name": "state"},
+                {"type": "uint64", "name": "createdAt"},
+                {"type": "uint64", "name": "acceptDeadline"},
+                {"type": "uint64", "name": "completeDeadline"},
+                {"type": "bytes32", "name": "multihopId"},
+                {"type": "uint64", "name": "step"}
+            ]
+        }],
         "stateMutability": "view",
         "type": "function"
     }

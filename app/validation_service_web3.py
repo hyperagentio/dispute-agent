@@ -163,22 +163,26 @@ class ValidationService:
                 args=[job_id_bytes]
             )
             
+            # Result is a tuple (struct)
+            # Web3.py returns tuples as tuples, so we can unpack directly
+            job_tuple = result
+            
             # Parse result tuple
             # (address creator, uint256 agentId, uint256 budget, string description,
             #  uint8 state, uint64 createdAt, uint64 acceptDeadline, uint64 completeDeadline,
             #  bytes32 multihopId, uint64 step)
             
             job = JobDetails(
-                creator=result[0],
-                agent_id=result[1],
-                budget=result[2],
-                description=result[3],
-                state=result[4],
-                created_at=result[5],
-                accept_deadline=result[6],
-                complete_deadline=result[7],
-                multihop_id=result[8],
-                step=result[9]
+                creator=job_tuple[0],
+                agent_id=job_tuple[1],
+                budget=job_tuple[2],
+                description=job_tuple[3],
+                state=job_tuple[4],
+                created_at=job_tuple[5],
+                accept_deadline=job_tuple[6],
+                complete_deadline=job_tuple[7],
+                multihop_id=job_tuple[8],
+                step=job_tuple[9]
             )
             
             logger.info(f"Job details retrieved: agent_id={job.agent_id}")
