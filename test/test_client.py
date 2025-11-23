@@ -1,9 +1,10 @@
 """
 Test client for the job verification service.
 
-This script demonstrates the API flow:
-1. Submit a job for verification
-2. Poll for the result
+Simple test that:
+1. Submits a job for verification
+2. Polls for the result
+3. Displays the verification result
 """
 
 import asyncio
@@ -21,26 +22,9 @@ load_dotenv()
 API_URL = os.getenv("API_URL", "http://localhost:4021")
 
 
-async def check_service():
-    """Check if the service is running"""
-    print("🔍 Checking if service is running...")
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(f"{API_URL}/")
-            if response.status_code == 200:
-                print("   ✅ Service is running\n")
-                return True
-            else:
-                print(f"   ❌ Service returned status {response.status_code}\n")
-                return False
-        except Exception as e:
-            print(f"   ❌ Error connecting to service: {e}\n")
-            return False
-
-
-async def request_verification(job_data: str):
+async def submit_job(job_data: str):
     """Submit a job for verification"""
-    print(f"📝 Requesting job verification from {API_URL}/verify...")
+    print(f"📝 Submitting job to {API_URL}/verify...")
     print(f"   Job data length: {len(job_data)} characters\n")
     
     start_time = time.time()
@@ -57,25 +41,22 @@ async def request_verification(job_data: str):
             
             if response.status_code == 200:
                 result = response.json()
-                print(f"✅ Job created (took {elapsed:.2f}s)")
+                print(f"✅ Job submitted successfully (took {elapsed:.2f}s)")
                 print(f"   Job ID: {result['job_id']}")
-                print(f"   Status: {result['status']}")
-                print(f"   Status URL: {result['status_url']}")
-                print(f"   AI Provider: {result['provider']}\n")
+                print(f"   Status: {result['status']}\n")
                 return result["job_id"]
             else:
-                print(f"❌ Request failed with status {response.status_code} (after {elapsed:.2f}s)")
+                print(f"❌ Request failed with status {response.status_code}")
                 print(f"   Response: {response.text}\n")
                 return None
         except Exception as e:
-            elapsed = time.time() - start_time
-            print(f"❌ Error submitting job (after {elapsed:.2f}s): {e}\n")
+            print(f"❌ Error submitting job: {e}\n")
             return None
 
 
 async def poll_for_result(job_id: str, max_attempts: int = 150, poll_interval: float = 2.0):
     """Poll for the verification result"""
-    print("⏳ Polling for result...")
+    print("⏳ Waiting for verification result...")
     
     start_time = time.time()
     
@@ -92,26 +73,24 @@ async def poll_for_result(job_id: str, max_attempts: int = 150, poll_interval: f
                     
                     if result["status"] == "completed":
                         elapsed = time.time() - start_time
-                        print(f"   ✅ Completed after ~{int(elapsed)}s\n")
+                        print(f"   ✅ Completed after {int(elapsed)}s\n")
                         return result
                     elif result["status"] == "failed":
                         print(f"   ❌ Job failed: {result.get('error', 'Unknown error')}\n")
                         return None
                     else:
                         # Still processing
-                        print(f"   Still processing... ({attempt}/{max_attempts})")
-                        print(f"   Current status: {result['status']}")
-                        print(f"   Full response: {result}")
+                        if attempt % 5 == 0:  # Print status every 5 attempts
+                            print(f"   ⏳ Still processing... ({attempt}/{max_attempts})")
                         await asyncio.sleep(poll_interval)
                 else:
                     print(f"   ❌ Error checking status: {response.status_code}")
-                    print(f"   Response: {response.text}\n")
                     return None
             except Exception as e:
-                print(f"   ❌ Error polling for result: {e}")
+                print(f"   ❌ Error polling: {e}")
                 await asyncio.sleep(poll_interval)
         
-        print(f"   ❌ Timeout: Job did not complete after {max_attempts} attempts\n")
+        print(f"   ❌ Timeout after {max_attempts} attempts\n")
         return None
 
 
@@ -120,38 +99,42 @@ def display_result(result: dict):
     if not result:
         return
     
-    print("📄 Result:")
-    verification_result = result.get("result", "No result available")
-    # Word wrap the result to 70 characters
-    words = verification_result.split()
-    line = "   "
-    for word in words:
-        if len(line) + len(word) + 1 > 73:
-            print(line)
-            line = "   " + word
-        else:
-            line += " " + word if line != "   " else word
-    if line != "   ":
-        print(line)
-    print()
+    print("=" * 60)
+    print("📄 VERIFICATION RESULT")
+    print("=" * 60)
     
-    print("📊 Stats:")
+    verification_result = result.get("result", "No result available")
+    print(f"\n{verification_result}\n")
+    
+    print("-" * 60)
+    print("📊 STATISTICS")
+    print("-" * 60)
     if "word_count" in result:
-        print(f"   Word count: {result['word_count']}")
-    if "reading_time_minutes" in result:
-        print(f"   Reading time: {result['reading_time_minutes']} minute{'s' if result['reading_time_minutes'] != 1 else ''}")
-    if "provider" in result:
-        print(f"   AI Provider: {result.get('provider', 'unknown')}")
+        print(f"Word count: {result['word_count']}")
+    if "reading_time" in result:
+        print(f"Reading time: {result['reading_time']}")
+    if "timestamp" in result:
+        print(f"Timestamp: {result['timestamp']}")
+    print("=" * 60)
     print()
 
 
 async def main():
     """Main test function"""
-    print("🚀 Starting API test...\n")
+    print("🚀 Job Verification Test\n")
     
-    # Check if service is running
-    if not await check_service():
-        print("❌ Service is not available. Make sure it's running first.\n")
+    # Check service
+    print(f"🔍 Checking service at {API_URL}...")
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{API_URL}/")
+            if response.status_code == 200:
+                print("   ✅ Service is running\n")
+            else:
+                print(f"   ❌ Service returned {response.status_code}\n")
+                sys.exit(1)
+    except Exception as e:
+        print(f"   ❌ Cannot connect to service: {e}\n")
         sys.exit(1)
     
     # Load job data
@@ -168,20 +151,20 @@ async def main():
         print(f"❌ Job data file not found: {job_file_path}\n")
         sys.exit(1)
     
-    # Submit job for verification
-    job_id = await request_verification(job_data)
-    
+    # Submit job
+    job_id = await submit_job(job_data)
     if not job_id:
-        print("❌ Failed to create verification job\n")
+        print("❌ Failed to submit job\n")
         sys.exit(1)
     
     # Poll for result
     result = await poll_for_result(job_id)
     
+    # Display result
     if result:
         display_result(result)
     else:
-        print("❌ Failed to get result\n")
+        print("❌ Failed to get verification result\n")
         sys.exit(1)
 
 

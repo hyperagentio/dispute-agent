@@ -1,53 +1,46 @@
-# Test Client
+# Job Verification Test Client
 
 Test client for the job verification service.
 
-## Setup
+## Installation
 
-1. Install dependencies:
 ```bash
 cd test
 uv sync
 ```
 
-2. Get CDP API credentials:
-   - Go to [Coinbase Developer Platform](https://portal.cdp.coinbase.com/)
-   - Create an API key
-   - Save your credentials
+## Configuration
 
-3. Configure environment:
+Create a `.env` file:
+
 ```bash
-cp .env.example .env
-# Edit .env with your CDP API credentials
+# API endpoint
+API_URL=http://localhost:4021
 ```
 
 ## Usage
 
-Run the test client:
+Test with the default test data:
 
 ```bash
 uv run python test_client.py
 ```
 
-The client will:
-1. Make a request to the protected endpoint
-2. Receive a 402 Payment Required response
-3. Use CDP SDK to make a payment on BASE Sepolia
-4. Retry the request with the payment proof
-5. Receive and display the verification result
+Test with your own job data:
 
-## Configuration
+```bash
+uv run python test_client.py /path/to/your/job_data.txt
+```
 
-Set the following in `.env`:
+## How It Works
 
-- `CDP_API_KEY_NAME`: Your CDP API key name
-- `CDP_API_KEY_PRIVATE_KEY`: Your CDP API private key
-- `API_URL`: The API endpoint (default: http://localhost:4021)
+1. Connects to the verification service
+2. Submits job data to `/verify` endpoint
+3. Polls `/verify/{job_id}` for the result
+4. Displays the verification result
 
 ## AI Provider Information
 
 The service uses **Ollama** for local inference with the Qwen2 0.5B model.
 
 The test client will display the provider information in the output.
-
-```
