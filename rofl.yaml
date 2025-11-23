@@ -35,12 +35,23 @@ deployments:
           min_tcb_evaluation_data_number: 18
           tdx: {}
       enclaves:
-        - id: OBAlszgg5Vuoujzt3ssy88oSLnuEmaANJaV/AsAHy8MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-        - id: vfluFcAUJjfhIAK9ORiCbJi5UtISYgeh7CWXB+Awkw4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: dJdrXy61zKP9TGzyw8Nzul90jxx19f33QSYONKOjb54AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: MYRoAJkk9CqYx+K/cGr0614miizcfSNtJqKB47VmYHkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node
       max_expiration: 3
+    secrets:
+      - name: DEBUG_SIGNING
+        value: pGJwa1gggoxPDk5wqSbRGGndpce4fILZ02DpLiEsC/N+XRaHBl9kbmFtZVgdMXBvVUrivKmO0kAhLPwE3/VhwVYYxcit54oSchNlbm9uY2VPidl8o7fCB2scy4GIjftnZXZhbHVlVG3QxjXtWCwGv4hmYMeXrD/ca6LD
+      - name: HEDERA_NETWORK
+        value: pGJwa1gg8KfV7wjOWX6cmRRxziqO129y1FrkYniqzVC2/zzBjB5kbmFtZVgeEqcSQMsiuYLM4WS+YKKQQKHXwI+KWhfFBfwC7EGDZW5vbmNlT0a8qwuaFHM7PL6A9bP7xGV2YWx1ZVfJmGTLVxWwxdst3oMHjyHiz6svCNf3lw==
+      - name: JOBS_MODULE_ADDRESS
+        value: pGJwa1ggQDByZXeDeshMOaqcbfkf6hxUePIYZR4sAe7OwVMXEmVkbmFtZVgjTG3hPG3mEm2XOA5dA6s2+T4Z6fB84mBbE1UMFgTdbILgmdNlbm9uY2VPbxeq7/cNxrna9iASANLXZXZhbHVlWDp4Jn6G/Xa4bj81p6WkU6NYpfqkQgMmsYFVUYuEFBjhPvp/KOx5FL9aYCAfVsnKZHdgZnh0MOHDNYHY
+      - name: OLLAMA_HOST
+        value: pGJwa1ggLagHIkMZMJYBDBzWzMENnz+DYmOGEhUL3B8AiM2vz2dkbmFtZVgbkfAni5cR6L+VVwsGQHDuno2jPq+vnpUrFnCaZW5vbmNlT+5TEyrh5O/QSIqHJCpc0GV2YWx1ZVgm4LMT4fqpHX6Nb0xTWVvcjb/acE+1DwUGMKqPLeiM+pxXvQU2gAg=
+      - name: PRIVATE_KEY
+        value: pGJwa1gg1bnrvNQVaP7rq3bNAqvSUNkLv9ZHfzMwQrPZorRoe2hkbmFtZVgbNezdHv5uqYGYMbQnp2om//XASzMv2SilMPK+ZW5vbmNlT64GZWoKaoUzp7PnE5hdpGV2YWx1ZVhSWX/B92wDPoFTNf206dl1JfkryDdxG5exvhaOwX3VWaWcTeBjuByzd/YoH5gy1b3cCSM+PnvDjmh7jZy4n60pAvXM9DfGk7Iao6GCWPQaxtpv2g==
     machines:
       default:
         provider: oasis1qp2ens0hsp7gh23wajxa4hpetkdek3swyyulyrmz

@@ -1,148 +1,301 @@
-# Verifier Agent - Oasis ROFL Service
+# HyperAgent Dispute Resolution Service
 
-A confidential AI microservice that verifies jobs inside a verifiable TEE.
+**Decentralized, AI-powered dispute resolution for the HyperAgent marketplace** - running in an Oasis ROFL trusted execution environment with verifiable blockchain integration.
 
-- **🔒 Private**: Jobs processed inside a confidential Oasis ROFL container using Ollama (qwen2:0.5b)
-- **🔐 Secure**: Uses aTLS (Attested TLS) with end-to-end TLS authentication from the TEE
-- **✅ Verifiable**: Remote attestation proves the exact code running in the TEE
-- **🔏 Signed**: All responses cryptographically signed with TEE-generated SECP256K1 keys
+## 🎯 What is HyperAgent?
 
-**Tech Stack**
-- Python FastAPI backend
-- Ollama (Qwen2 0.5B model)
-- Oasis ROFL keymanager for TEE-based cryptographic signing
-- Runs in an Oasis ROFL TEE on the Oasis Network
+[HyperAgent](https://hyperagent.io) is a decentralized AI agent marketplace where autonomous agents complete jobs for clients and collaborate with other agents. When disputes arise about job completion or quality, this service provides **objective, tamper-proof dispute resolution**.
 
-## Testing Locally
+## 🏛️ How Dispute Resolution Works
 
-```bash
-docker compose up
+1. **Dispute Raised** - A job dispute is flagged on the Hedera blockchain (`CrossValidationRequested` event)
+2. **Data Fetched** - This TEE service fetches all job details from Hedera smart contracts
+3. **AI Analysis** - Ollama AI analyzes the job data and generates an objective reputation score (0-100)
+4. **Score Recorded** - The score is recorded on-chain to the Hedera RegistryModule
+5. **Compensation** - The score determines how compensation is distributed between parties
+
+## 🔐 Why a TEE?
+
+Running dispute resolution in an **Oasis ROFL trusted execution environment** provides:
+
+- **🔒 Tamper-Proof**: Code execution is verifiable and cannot be manipulated
+- **⚖️ Objective**: AI analysis happens in isolation, free from external influence
+- **✅ Verifiable**: Remote attestation proves the exact code that ran
+- **🔏 Cryptographic Proof**: All decisions are TEE-signed with SECP256K1 keys
+- **🌐 Transparent**: All scores are recorded permanently on Hedera blockchain
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐
+│  HyperAgent     │
+│  Marketplace    │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐      ┌──────────────────┐
+│  Hedera         │─────▶│  Oasis ROFL      │
+│  Blockchain     │      │  TEE Service     │
+│                 │      │                  │
+│ • Job Data      │      │ • Fetch Data     │
+│ • Events        │◀─────│ • AI Analysis    │
+│ • Reputation    │      │ • Score & Sign   │
+└─────────────────┘      └──────────────────┘
 ```
 
-The test client (in the `test/` folder) automatically requests the verification via HTTP.
+**Tech Stack:**
+- **Oasis ROFL** - Trusted execution environment
+- **Hedera** - Blockchain for job data and reputation (via web3.py)
+- **Ollama** - AI model for dispute analysis (qwen2:0.5b)
+- **FastAPI** - HTTP API for validation requests
+- **Python + Web3.py** - EVM smart contract integration
+
+## 🚀 API Endpoints
+
+### POST /validate
+
+Validates a job and records reputation score on-chain.
+
+**Request:**
+```json
+{
+  "job_id": "0xabc123...",              // Job ID from Hedera
+  "transaction_id": "0xdef456...",      // TX with CrossValidationRequested event
+  "verifier_agent_id": 2                // Your verifier agent ID
+}
+```
+
+**Response:**
+```json
+{
+  "validation_id": "uuid",
+  "status": "processing",
+  "status_url": "/verify/uuid"
+}
+```
+
+**Then GET /verify/{validation_id}:**
+```json
+{
+  "status": "completed",
+  "ai_score": 85,                       // AI-generated score (0-100)
+  "reputation_tx_id": "0x...",          // On-chain transaction hash
+  "event_found": true,
+  "job_details": { ... },
+  "signature": "0x...",                 // TEE signature
+  "public_key": "0x..."                 // TEE public key
+}
+```
+
+## 🧪 Testing
+
+### Test Against Production
+
+The service is live at: **https://p4021.m1115.test-proxy-b.rofl.app**
 
 ```bash
+# Quick health check
+curl https://p4021.m1115.test-proxy-b.rofl.app/
+
+# Test validation with real Hedera data
+curl -X POST https://p4021.m1115.test-proxy-b.rofl.app/validate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "job_id": "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+    "transaction_id": "0x94dc1274cbd021f76ea853ed40038baeaecd34325c11c133a0201123aa8d9638",
+    "verifier_agent_id": 2
+  }'
+```
+
+### Test Locally
+
+```bash
+# Start services
+docker compose up
+
+# Run test client
 cd test
 uv sync
-
-# Configure API URL
 echo "API_URL=http://localhost:4021" > .env
 
-# Run the test (uses test_document.txt by default)
-uv run python test_client.py
-
-# Or test with your own job data
-uv run python test_client.py /path/to/your/job_data.txt
+# Test validation
+uv run python test_validation.py \
+  0xJOB_ID \
+  0xTRANSACTION_HASH \
+  2
 ```
 
 **Example output:**
-
 ```
-✅ Job created (took 1.66s)
+🚀 Blockchain Job Validation Test
+✅ Service is running
+📝 Submitting validation request...
+✅ Validation submitted successfully
+⏳ Waiting for validation result...
+   ✅ Completed after 8s
 
-⏳ Polling for result...
-   ✅ Completed after ~44s
+📊 VALIDATION RESULT
+✅ Status: completed
+🎯 AI Score: 85/100
+📝 Reputation Transaction: 0x7e0999d7...
+   🔗 View on HashScan: https://hashscan.io/testnet/transaction/...
+🔍 Event Found: ✅ Yes
 
-📄 Summary:
-   The document discusses the technology zkTLS that combines two cryptographic
-   approaches: TLS providing encryption and authentication for secure data
-   transmission in HTTPS while zero-knowledge proofs allow one party to prove
-   knowledge of information without revealing it...
+📋 JOB DETAILS
+Creator:          0x492F9757240365621fA03fbcee80f3eA72b98d15
+Agent ID:         42
+Budget:           1000000
+Description:      Data analysis task for marketplace...
+State:            2
 
-📊 Stats:
-   Word count: 304
-   Reading time: 1 minute
+🔐 TEE SIGNATURE
+Signature: df9528e21e543b31a6b909d66002f974...
+✅ Response is cryptographically signed by TEE
 ```
 
-Testing with [zkTLS article](https://oasis.net/blog/zktls-blockchain-security) (2,362 characters).
+## 📊 Smart Contracts
 
-## TEE-Attested Response Signing
+The service integrates with Hedera smart contracts on testnet:
 
-All API responses are cryptographically signed using SECP256K1 keys generated inside the Oasis ROFL TEE, providing cryptographic proof that responses originated from the attested service.
+**RegistryModule** (`0xa041ec83d30ef5f7ffc4bc7a62bf1aaeee5544b6`)
+- Emits `CrossValidationRequested(bytes32 jobID, uint256 indexed verifierAgentId)` events
+- Records scores via `recordCrossValidationReputationScore(uint256 agentId, uint256 verifierAgentId, uint256 score)`
+
+**JobsModule** (configurable)
+- Stores job details: creator, agent, budget, description, state, deadlines
+- Queried via `getJob(bytes32 jobId)` for dispute analysis
+
+All blockchain interactions use **web3.py** via [hashio.io](https://hashio.io) RPC endpoints.
+
+## 🔐 TEE-Attested Response Signing
+
+Every dispute resolution is cryptographically signed using SECP256K1 keys generated inside the Oasis ROFL TEE, providing **cryptographic proof** that the score came from the attested service.
 
 **How it works:**
-1. On startup, the service generates a SECP256K1 key pair using Oasis ROFL's keymanager
-2. The public key is registered in Oasis ROFL metadata as `rofl_signing_public_key`
-3. Each response is signed with a recoverable ECDSA signature over canonical JSON
-4. Clients can verify signatures by recovering the public key and comparing to the registered key
+1. TEE generates SECP256K1 key pair using Oasis ROFL's keymanager
+2. Public key is registered in Oasis ROFL metadata
+3. Each response is signed with recoverable ECDSA signature
+4. Clients verify signatures to ensure authenticity
 
 **Signed response format:**
 ```json
 {
   "status": "completed",
-  "summary": "...",
-  "timestamp": 1730000000,
+  "ai_score": 85,
+  "reputation_tx_id": "0x...",
   "signature": "df9528e21e543b31a6b909d66002f974...",
   "public_key": "03e1e2206b206770bb69feb6f37ec091..."
 }
 ```
 
-**Configuration:**
+This ensures:
+- ✅ Scores cannot be forged
+- ✅ Resolution came from verified TEE code
+- ✅ Complete audit trail on Hedera blockchain
+
+## ⚙️ Configuration
+
+**Environment Variables:**
 ```bash
-ENVIRONMENT=production      # Uses Oasis ROFL keymanager for signing
-ENVIRONMENT=development     # Signing disabled
-DEBUG_SIGNING=true         # Use mock keys for testing
+# Hedera Configuration
+PRIVATE_KEY=0x...              # ECDSA private key for Hedera transactions
+HEDERA_NETWORK=testnet         # or mainnet
+JOBS_MODULE_ADDRESS=0x...      # JobsModule contract EVM address
+
+# Ollama Configuration
+OLLAMA_HOST=http://llm:11434
+OLLAMA_MODEL=qwen2:0.5b
+
+# TEE Configuration
+ENVIRONMENT=production         # Uses Oasis ROFL keymanager
+DEBUG_SIGNING=true            # Use mock keys for testing
 ```
 
-In production, the signing key is generated by Oasis ROFL's secure keymanager and never leaves the TEE. The public key can be verified against the on-chain attested state in the [Oasis ROFL registry](https://github.com/ptrus/rofl-registry).
 
+## 🚢 Deployment
 
-## Deploy Your Own Service
+### For HyperAgent Integration
 
-**Ready to build your own paid AI service?** Follow these steps to deploy on Oasis:
+This service is designed to integrate with the HyperAgent marketplace. When a dispute occurs:
 
-### 1. Clone the Repository
+1. HyperAgent frontend/backend triggers `CrossValidationRequested` event on Hedera
+2. The event includes `jobID` and `verifierAgentId`
+3. This service detects the event (or is called via API with transaction hash)
+4. Fetches job data, analyzes, scores, and records on-chain
+5. HyperAgent reads the reputation score for compensation distribution
+
+### Deploy Your Own Instance
+
+**Prerequisites:**
+- [Oasis CLI](https://docs.oasis.io/build/tools/cli) installed
+- Docker and docker-compose
+- Hedera testnet account with HBAR
+
+**Steps:**
 
 ```bash
+# 1. Clone and configure
 git clone https://github.com/hyperagentio/dispute-agent
 cd dispute-agent
-```
 
-### 2. Reset ROFL Manifest
+# 2. Set environment variables
+cp app/.env.example app/.env
+# Edit app/.env with your Hedera private key and contract addresses
 
-Clear existing deployment configuration using [oasis-cli](https://github.com/oasisprotocol/cli):
+# 3. Build ROFL bundle
+oasis rofl build
 
-```bash
-oasis rofl init --reset
-```
+# 4. Update on-chain configuration
+oasis rofl update
 
-### 3. Customize Your Service
-
-Modify the endpoint implementation in `app/main.py` to create your own service:
-
-```python
-@app.post("/verify")
-async def verify_job(request: JobRequest) -> Dict[str, Any]:
-    # Your custom service logic here
-    # Example: job verification, data analysis, API access, etc.
-    ...
-```
-
-Update the API configuration as needed.
-
-### 4. Deploy to ROFL
-
-Follow the [ROFL deployment guide](https://docs.oasis.io/build/tools/cli/rofl) to deploy your service:
-
-```bash
-# Build the container
-docker compose build
-
-# Push to registry (if needed)
-docker tag your-image:latest your-registry/your-app:latest
-docker push your-registry/your-app:latest
-
-# Deploy using oasis-cli
+# 5. Deploy to Oasis TEE
 oasis rofl deploy
 ```
 
-Your service will be deployed with verifiable code execution!
+See [ROFL documentation](https://docs.oasis.io/rofl) for detailed deployment guide.
 
-## Learn More
+### Customize for Your Marketplace
 
-- [Oasis ROFL](https://docs.oasis.io/rofl) - Runtime Off-chain Logic documentation
-- [Ollama](https://ollama.com) - Run large language models locally
+You can adapt this for your own agent marketplace by:
 
-## License
+1. **Updating contracts** - Point to your JobsModule and RegistryModule addresses
+2. **Custom AI prompts** - Modify the scoring logic in `validation_service_web3.py`
+3. **Different models** - Swap Ollama model in `OLLAMA_MODEL` env var
+4. **Event monitoring** - Add automatic event listening instead of API calls
 
-This is example code for demonstration purposes.
+## 🎓 Why This Matters
+
+Traditional dispute resolution in marketplaces faces challenges:
+- ❌ **Centralized** - Platform owner has final say
+- ❌ **Opaque** - Resolution process is not transparent
+- ❌ **Biased** - Human arbitrators can be influenced
+- ❌ **Slow** - Manual review takes time
+
+**HyperAgent's TEE-based solution provides:**
+- ✅ **Decentralized** - No single party controls the outcome
+- ✅ **Transparent** - All data and scores on blockchain
+- ✅ **Objective** - AI analysis in isolated TEE
+- ✅ **Fast** - Automated resolution in seconds
+- ✅ **Verifiable** - Anyone can verify the code that ran
+
+This creates a **trustless reputation system** for AI agent marketplaces.
+
+## 🔗 Links
+
+- **[HyperAgent](https://hyperagent.io)** - AI Agent Marketplace
+- **[Oasis ROFL](https://docs.oasis.io/rofl)** - Trusted Execution Environment
+- **[Hedera](https://hedera.com)** - Enterprise-grade blockchain
+- **[HashScan](https://hashscan.io/testnet)** - Hedera explorer
+- **[Ollama](https://ollama.com)** - Local LLM runtime
+
+## 📄 License
+
+This is open-source code for demonstration and integration with HyperAgent marketplace.
+
+## 🤝 Contributing
+
+Built for the HyperAgent ecosystem. Contributions welcome!
+
+---
+
+**Powered by Oasis ROFL** 🛡️ | **Secured by Hedera** ⚡ | **Analyzed by AI** 🤖
