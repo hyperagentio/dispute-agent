@@ -7,6 +7,7 @@ services:
 
   app:
     build: ./app
+    image: "docker.io/0xr3x/verifier-agent:latest"
     platform: linux/amd64
     ports:
       - "4021:4021"
@@ -15,15 +16,6 @@ services:
     environment:
       - ENDPOINT_URL=${ENDPOINT_URL:-http://localhost:4021/verify}
       - OLLAMA_HOST=http://llm:11434
-      - AGENT0_CHAIN_ID=${AGENT0_CHAIN_ID:-84532}
-      - AGENT0_RPC_URL=${AGENT0_RPC_URL}
-      - AGENT0_PRIVATE_KEY=${AGENT0_PRIVATE_KEY}
-      - AGENT0_IPFS_PROVIDER=${AGENT0_IPFS_PROVIDER:-pinata}
-      - AGENT0_PINATA_JWT=${AGENT0_PINATA_JWT}
-      - AGENT_NAME=${AGENT_NAME:-Verifier Agent}
-      - AGENT_DESCRIPTION=${AGENT_DESCRIPTION:-Verifier agent for dispute resolution running in TEE}
-      - AGENT_IMAGE=${AGENT_IMAGE:-http://localhost:4021/logo.png}
-      - AGENT_WALLET_ADDRESS=${AGENT_WALLET_ADDRESS}
       - ENVIRONMENT=${ENVIRONMENT:-development}
     depends_on:
       - llm

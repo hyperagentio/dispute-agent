@@ -5,12 +5,12 @@ description = "Verifier agent for dispute resolution"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "agent0-sdk @ git+https://github.com/ptrus/agent0-py.git@ptrus/fix/indexer-deps-group",
     "fastapi>=0.120.2",
     "python-dotenv>=1.0.0",
     "uvicorn>=0.38.0",
     "coincurve>=20.0.0",
     "oasis-rofl-client==0.1.6",
+    "web3>=6.0.0",
 ]
 
 [dependency-groups]

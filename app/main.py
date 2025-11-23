@@ -5,47 +5,44 @@ Oasis ROFL FastAPI server for job verification.
 import os
 import time
 import uuid
-from enum import Enum
-from pathlib import Path
-from typing import Any
+import logging
+from typing import Any, Optional
 
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, HTTPException
-from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from agent import add_signing_key_to_agent, initialize_agent
 from signing import signing_service
+
+# Import Web3 helper and validation service
+from web3_hedera_helper import HederaWeb3Helper
+from validation_service_web3 import ValidationService
 
 # Load environment variables
 load_dotenv()
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Get configuration from environment
 ENDPOINT_URL = os.getenv("ENDPOINT_URL", "http://localhost:4021/verify")
+
+# Hedera/Web3 configuration
+HEDERA_PRIVATE_KEY = os.getenv("PRIVATE_KEY", "0x22031d463eda96ebc465b649d31375cd22bd2eefc6c09bcd97da753cbb61e49a")
+HEDERA_NETWORK = os.getenv("HEDERA_NETWORK", "testnet")
+
+# Contract addresses (EVM addresses, not Hedera IDs)
+JOBS_MODULE_ADDRESS = os.getenv("JOBS_MODULE_ADDRESS", "0x0000000000000000000000000000000000000000")
 
 # Import Ollama provider
 import ollama_provider as ai_provider
 
-# Agent0 SDK configuration
-AGENT0_CHAIN_ID = int(os.getenv("AGENT0_CHAIN_ID", "11155111"))
-AGENT0_RPC_URL = os.getenv("AGENT0_RPC_URL")
-AGENT0_PRIVATE_KEY = os.getenv("AGENT0_PRIVATE_KEY")
-AGENT0_IPFS_PROVIDER = os.getenv("AGENT0_IPFS_PROVIDER", "pinata")
-AGENT0_PINATA_JWT = os.getenv("AGENT0_PINATA_JWT")
-
-# Agent configuration
-AGENT_NAME = os.getenv("AGENT_NAME", "Verifier Agent")
-AGENT_DESCRIPTION = os.getenv(
-    "AGENT_DESCRIPTION",
-    "Verifier agent for dispute resolution running in TEE. REST API for async verification. Ollama AI backend. On-chain registered with reputation trust model.",
-)
-AGENT_IMAGE = os.getenv("AGENT_IMAGE", "https://example.com/agent-image.png")
-AGENT_WALLET_ADDRESS = os.getenv("AGENT_WALLET_ADDRESS")
-
 app = FastAPI()
 
-# Logo path
-LOGO_PATH = Path(__file__).parent / "logo.png"
+# Global Web3 helper and validation service
+web3_helper: Optional[HederaWeb3Helper] = None
+validation_service: Optional[ValidationService] = None
 
 # Model constraints
 MAX_JOB_DATA_LENGTH = 400000  # ~100K tokens (rough estimate: 4 chars per token)
@@ -54,68 +51,58 @@ MIN_JOB_DATA_LENGTH = 50  # Minimum meaningful job data length
 # In-memory job storage (in production, use Redis or similar)
 jobs: dict[str, dict[str, Any]] = {}
 
-# Global agent instance
-agent = None
-
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize Agent0 SDK, signing service, and create agent on startup"""
-    global agent
-
+    """Initialize ROFL signing service and Web3 helper on startup"""
+    global web3_helper, validation_service
+    
     # Initialize ROFL signing service
     await signing_service.initialize()
-
-    # Initialize Agent0 SDK and create agent
-    _, agent = await initialize_agent(
-        agent0_chain_id=AGENT0_CHAIN_ID,
-        agent0_rpc_url=AGENT0_RPC_URL,
-        agent0_private_key=AGENT0_PRIVATE_KEY,
-        agent0_ipfs_provider=AGENT0_IPFS_PROVIDER,
-        agent0_pinata_jwt=AGENT0_PINATA_JWT,
-        agent_name=AGENT_NAME,
-        agent_description=AGENT_DESCRIPTION,
-        agent_image=AGENT_IMAGE,
-        agent_wallet_address=AGENT_WALLET_ADDRESS,
-        endpoint_url=ENDPOINT_URL,
-        ai_provider="ollama",
-    )
-
-    # Add signing public key to agent metadata if available
-    if agent and signing_service.public_key_hex:
-        await add_signing_key_to_agent(agent, signing_service.public_key_hex)
+    
+    # Initialize Web3 helper for Hedera
+    try:
+        logger.info("Initializing Web3 helper for Hedera...")
+        
+        web3_helper = HederaWeb3Helper(
+            private_key=HEDERA_PRIVATE_KEY,
+            network=HEDERA_NETWORK
+        )
+        
+        balance = web3_helper.get_balance_hbar()
+        logger.info(f"Web3 initialized - Account: {web3_helper.address}")
+        logger.info(f"Balance: {balance:.4f} HBAR")
+        
+        # Initialize validation service
+        if JOBS_MODULE_ADDRESS != "0x0000000000000000000000000000000000000000":
+            validation_service = ValidationService(web3_helper, JOBS_MODULE_ADDRESS)
+            logger.info("Validation service initialized")
+        else:
+            logger.warning("JOBS_MODULE_ADDRESS not set - validation endpoint disabled")
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize Web3 helper: {e}", exc_info=True)
+        logger.warning("Validation endpoint will not be available")
 
 
 class JobRequest(BaseModel):
     job_data: str
 
 
+class ValidationRequest(BaseModel):
+    job_id: str  # Hex string (e.g., "0xabc123...")
+    transaction_id: Optional[str] = None  # Transaction ID that contains CrossValidationRequested event
+    verifier_agent_id: Optional[int] = None  # Optional: your verifier agent ID
+
+
 @app.get("/")
 async def root() -> dict[str, Any]:
     """Root endpoint with service information"""
-    response = {
+    return {
         "service": "Verifier Agent",
         "endpoint": "POST /verify",
         "ai_provider": "ollama",
     }
-
-    # Add agent information if available
-    if agent:
-        response["agent"] = {
-            "id": getattr(agent, "agentId", None),
-            "uri": getattr(agent, "agentURI", None),
-            "name": AGENT_NAME,
-        }
-
-    return response
-
-
-@app.get("/logo.png")
-async def get_logo():
-    """Serve the agent logo"""
-    if LOGO_PATH.exists():
-        return FileResponse(LOGO_PATH, media_type="image/png")
-    raise HTTPException(status_code=404, detail="Logo not found")
 
 
 @app.post("/verify")
@@ -166,6 +153,218 @@ async def get_verification_status(job_id: str) -> dict[str, Any]:
     signed_response = signing_service.sign_response(response)
 
     return signed_response
+
+
+@app.post("/validate")
+async def validate_job(
+    request: ValidationRequest, background_tasks: BackgroundTasks
+) -> dict[str, Any]:
+    """
+    Cross-validate a job from the blockchain
+    
+    Steps:
+    1. Check for CrossValidationRequested event (if transaction_id provided)
+    2. Fetch job details from JobsModule contract
+    3. Use AI to generate reputation score (0-100)
+    4. Record score on RegistryModule contract
+    """
+    if not validation_service:
+        raise HTTPException(
+            status_code=503,
+            detail="Validation service not available. Check Hedera client configuration."
+        )
+    
+    # Validate job_id format
+    job_id = request.job_id
+    if not job_id.startswith("0x"):
+        job_id = f"0x{job_id}"
+    
+    # Create validation task ID
+    validation_id = str(uuid.uuid4())
+    jobs[validation_id] = {"status": "processing", "timestamp": int(time.time())}
+    
+    # Start background validation
+    background_tasks.add_task(
+        process_validation,
+        validation_id,
+        job_id,
+        request.transaction_id,
+        request.verifier_agent_id
+    )
+    
+    return {
+        "validation_id": validation_id,
+        "status": "processing",
+        "status_url": f"/verify/{validation_id}",
+        "job_id": job_id,
+        "timestamp": int(time.time()),
+    }
+
+
+def process_validation(
+    validation_id: str,
+    job_id: str,
+    transaction_id: Optional[str],
+    verifier_agent_id: Optional[int]
+):
+    """
+    Background task to process job validation
+    
+    Args:
+        validation_id: Validation task ID
+        job_id: Job ID to validate
+        transaction_id: Optional transaction ID with CrossValidationRequested event
+        verifier_agent_id: Optional verifier agent ID
+    """
+    try:
+        logger.info(f"Starting validation for job {job_id}")
+        
+        # Step 1: Check for CrossValidationRequested event (if transaction provided)
+        event_found = False
+        if transaction_id:
+            logger.info(f"Checking CrossValidationRequested in transaction {transaction_id}")
+            event_found = validation_service.check_event_in_transaction(
+                transaction_id,
+                job_id,
+                verifier_agent_id
+            )
+            
+            if not event_found:
+                logger.warning(f"CrossValidationRequested event not found for job {job_id}")
+                jobs[validation_id] = {
+                    "status": "failed",
+                    "error": "CrossValidationRequested event not found in provided transaction",
+                    "job_id": job_id,
+                    "timestamp": int(time.time())
+                }
+                return
+        else:
+            logger.info("No transaction_id provided, skipping event check")
+        
+        # Step 2: Fetch job details from JobsModule
+        logger.info(f"Fetching job details for {job_id}")
+        job_details = validation_service.get_job_details(job_id)
+        
+        if not job_details:
+            jobs[validation_id] = {
+                "status": "failed",
+                "error": f"Job not found: {job_id}",
+                "job_id": job_id,
+                "timestamp": int(time.time())
+            }
+            return
+        
+        # Step 3: Build AI context and get reputation score
+        logger.info("Building AI context for validation")
+        ai_context = validation_service.build_ai_context(job_details)
+        
+        # Use Ollama to generate score
+        logger.info("Requesting AI validation score")
+        score = get_ai_validation_score(ai_context, job_details.description)
+        
+        if score is None:
+            jobs[validation_id] = {
+                "status": "failed",
+                "error": "Failed to get AI validation score",
+                "job_id": job_id,
+                "job_details": job_details.to_dict(),
+                "timestamp": int(time.time())
+            }
+            return
+        
+        logger.info(f"AI validation score: {score}")
+        
+        # Step 4: Record reputation score on RegistryModule
+        logger.info("Recording reputation score on blockchain")
+        
+        # Use verifier_agent_id from request or default to 0
+        verifier_id = verifier_agent_id or 0
+        
+        reputation_tx_id = validation_service.record_reputation_score(
+            agent_id=job_details.agent_id,
+            verifier_agent_id=verifier_id,
+            score=score
+        )
+        
+        # Success!
+        jobs[validation_id] = {
+            "status": "completed",
+            "job_id": job_id,
+            "job_details": job_details.to_dict(),
+            "ai_score": score,
+            "reputation_tx_id": reputation_tx_id,
+            "event_found": event_found,
+            "timestamp": int(time.time())
+        }
+        
+        logger.info(f"Validation completed successfully for job {job_id}")
+        
+    except Exception as e:
+        logger.error(f"Error processing validation: {e}", exc_info=True)
+        jobs[validation_id] = {
+            "status": "failed",
+            "error": str(e),
+            "job_id": job_id,
+            "timestamp": int(time.time())
+        }
+
+
+def get_ai_validation_score(context: str, description: str) -> Optional[int]:
+    """
+    Use Ollama AI to generate a validation score (0-100)
+    
+    Args:
+        context: Full context about the job
+        description: Job description
+        
+    Returns:
+        Score between 0-100, or None if failed
+    """
+    import ollama
+    
+    try:
+        client = ollama.Client(host=os.getenv("OLLAMA_HOST", "http://localhost:11434"))
+        
+        system_prompt = """You are an expert job quality evaluator. Your task is to evaluate job completion and quality.
+
+You will be provided with job details including description, budget, deadlines, and state.
+
+Your response MUST be a single number between 0 and 100 representing the reputation score:
+- 0-20: Poor quality or incomplete
+- 21-40: Below average
+- 41-60: Average quality
+- 61-80: Good quality
+- 81-100: Excellent quality
+
+IMPORTANT: Respond with ONLY the number. No explanations, no text, just the number.
+"""
+        
+        response = client.chat(
+            model=os.getenv("OLLAMA_MODEL", "qwen2:0.5b"),
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": context}
+            ]
+        )
+        
+        # Extract score from response
+        result_text = response["message"]["content"].strip()
+        
+        # Try to extract just the number
+        import re
+        numbers = re.findall(r'\d+', result_text)
+        if numbers:
+            score = int(numbers[0])
+            # Clamp to 0-100
+            score = max(0, min(100, score))
+            return score
+        
+        logger.warning(f"Could not parse score from AI response: {result_text}")
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error getting AI validation score: {e}", exc_info=True)
+        return None
 
 
 if __name__ == "__main__":

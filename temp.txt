@@ -1,0 +1,17 @@
+# 1. Build the image (if not already built)
+cd /home/rex/Documents/playground/rofl-x402-service
+docker compose build app
+
+# 2. Tag it for Docker Hub (replace YOUR_DOCKERHUB_USERNAME)
+docker tag verifier-agent:local docker.io/YOUR_DOCKERHUB_USERNAME/verifier-agent:latest
+
+# 3. Login to Docker Hub
+docker login
+
+# 4. Push to Docker Hub
+docker push docker.io/0xr3x/verifier-agent:latest
+
+#' 5. upload to oasis
+oasis rofl build
+oasis rofl update
+oasis rofl deploy
